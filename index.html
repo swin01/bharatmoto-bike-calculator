@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indian Bike Fuel Cost & Mileage Calculator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🏍️</div>
+      <div>
+        <h1>
+          BharatMoto Fuel Calculator
+          <span class="india-flag">🇮🇳 India Only</span>
+        </h1>
+        <p>Motorcycle trip expense, real-world mileage database & live state fuel rates</p>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <!-- Live Sync Status & Refresh -->
+      <button class="live-status-pill" id="live-refresh-btn" onclick="fetchLiveFuelPrices()" title="Click to refresh live fuel price">
+        <span class="live-dot" id="live-dot-icon"></span>
+        <span id="live-sync-text">Live Fuel Rates Active</span>
+        <span style="font-size: 13px;">🔄</span>
+      </button>
+
+      <!-- Theme Toggle -->
+      <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+        <span id="theme-icon">🌙</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" id="tab-nav-trip" onclick="switchTab('trip-tab', this)">
+      <span>🛣️</span> Single Trip & Touring Cost
+    </button>
+    <button class="tab-btn" id="tab-nav-commute" onclick="switchTab('commute-tab', this)">
+      <span>💼</span> Daily Commute & Annual Fuel Budget
+    </button>
+    <button class="tab-btn" id="tab-nav-compare" onclick="switchTab('compare-tab', this)">
+      <span>⚖️</span> Compare Two Bikes
+    </button>
+    <button class="tab-btn" id="tab-nav-directory" onclick="switchTab('directory-tab', this)">
+      <span>📖</span> 60+ Bikes Mileage Directory
+    </button>
+  </div>
+
+  <!-- TAB 1: Single Trip & Tour Calculator -->
+  <div id="trip-tab" class="tab-pane active">
+    <div class="calc-layout">
+      <!-- Left Inputs -->
+      <div>
+        <!-- Card 1: Bike Selection & Mileage Fetch -->
+        <div class="card">
+          <div class="card-title">
+            <span>1. Select Bike Model & Auto-Fetch Mileage</span>
+            <span class="badge orange">Database Auto-Sync</span>
+          </div>
+
+          <!-- Brand & Model Filter -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bike-brand-select">Bike Manufacturer</label>
+              <select id="bike-brand-select" onchange="onBrandChange()">
+                <option value="ALL">-- All Brands --</option>
+                <option value="Hero">Hero MotoCorp</option>
+                <option value="Honda">Honda Motorcycle</option>
+                <option value="Bajaj">Bajaj Auto</option>
+                <option value="TVS">TVS Motor</option>
+                <option value="Royal Enfield" selected>Royal Enfield</option>
+                <option value="Yamaha">Yamaha</option>
+                <option value="KTM">KTM</option>
+                <option value="Suzuki">Suzuki</option>
+                <option value="Triumph">Triumph</option>
+                <option value="Jawa">Jawa / Yezdi</option>
+                <option value="Kawasaki">Kawasaki</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="bike-model-select">Select Motorcycle Model</label>
+              <select id="bike-model-select" onchange="onModelSelect()">
+                <!-- Populated dynamically via JS -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Auto-fetched Specs Display -->
+          <div class="bike-info-card" id="bike-specs-banner">
+            <div class="bike-stat">
+              <span class="bike-stat-lbl">Engine</span>
+              <span class="bike-stat-val" id="spec-engine">349 cc</span>
+            </div>
+            <div class="bike-stat">
+              <span class="bike-stat-lbl">ARAI Mileage</span>
+              <span class="bike-stat-val" id="spec-arai">41.5 km/L</span>
+            </div>
+            <div class="bike-stat">
+              <span class="bike-stat-lbl">Fuel Tank</span>
+              <span class="bike-stat-val" id="spec-tank">13.0 Litres</span>
+            </div>
+            <div class="bike-stat">
+              <span class="bike-stat-lbl">Full Tank Range</span>
+              <span class="bike-stat-val" id="spec-range">~468 km</span>
+            </div>
+          </div>
+
+          <!-- Riding Condition Multiplier -->
+          <div class="form-group" style="margin-top: 14px;">
+            <label>Riding Condition (Adjusts Real Mileage)</label>
+            <div class="preset-chips">
+              <button class="chip-btn" id="cond-city" onclick="setCondition('city')">🚦 Heavy City Traffic (-10%)</button>
+              <button class="chip-btn active" id="cond-mixed" onclick="setCondition('mixed')">🏍️ Normal Mixed Riding (Baseline)</button>
+              <button class="chip-btn" id="cond-highway" onclick="setCondition('highway')">🛣️ Open Highway Cruising (+10%)</button>
+              <button class="chip-btn" id="cond-eco" onclick="setCondition('eco')">🌱 Strict Economy / ARAI (+15%)</button>
+            </div>
+          </div>
+
+          <!-- Efficiency Input (Editable) -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px;">
+              <label for="trip-eff" style="margin-bottom: 0;">Bike Fuel Efficiency / Mileage</label>
+              <span style="font-size: 11px; color: var(--primary); font-weight: 700;" id="eff-source-label">Fetched from database</span>
+            </div>
+            <div class="input-wrapper">
+              <input type="number" id="trip-eff" value="36.0" min="5" max="120" step="0.5" class="has-suffix" oninput="onCustomMileageInput()">
+              <span class="input-affix suffix">km / Litre</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Total Distance & Journey Parameters -->
+        <div class="card">
+          <div class="card-title">
+            <span>2. Journey Distance & Routing</span>
+            <span class="badge">Distance</span>
+          </div>
+
+          <div class="form-group">
+            <label for="trip-dist">
+              One-Way Trip Distance <span class="label-hint">(Kilometers)</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="number" id="trip-dist" value="180" min="1" step="1" class="has-suffix" oninput="calcTrip()">
+              <span class="input-affix suffix">km</span>
+            </div>
+            <!-- Preset Distance Chips -->
+            <div class="preset-chips">
+              <span style="font-size: 11px; color: var(--text-muted); align-self: center; margin-right: 4px;">Quick Presets:</span>
+              <button class="chip-btn" onclick="setTripDist(25)">25 km</button>
+              <button class="chip-btn" onclick="setTripDist(50)">50 km</button>
+              <button class="chip-btn" onclick="setTripDist(100)">100 km</button>
+              <button class="chip-btn" onclick="setTripDist(250)">250 km</button>
+              <button class="chip-btn" onclick="setTripDist(500)">500 km</button>
+              <button class="chip-btn" onclick="setTripDist(1000)">1000 km</button>
+            </div>
+          </div>
+
+          <!-- Round Trip Toggle -->
+          <div class="toggle-row">
+            <div>
+              <div style="font-weight: 700; font-size: 13px;">Return Journey (Round Trip)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Doubles total distance calculated</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="trip-roundtrip" checked onchange="calcTrip()">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Card 3: Real-Time Fuel Price for All Indian States -->
+        <div class="card">
+          <div class="card-title">
+            <span>3. Real-Time State & City Fuel Rates</span>
+            <span class="badge green">Live Daily OMC Rates</span>
+          </div>
+
+          <!-- State & City Selectors -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="fuel-state-select">Select Indian State / UT</label>
+              <select id="fuel-state-select" onchange="onStateChange()">
+                <option value="West Bengal" selected>West Bengal</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Delhi">Delhi (NCR)</option>
+                <option value="Karnataka">Karnataka</option>
+                <option value="Tamil Nadu">Tamil Nadu</option>
+                <option value="Telangana">Telangana</option>
+                <option value="Uttar Pradesh">Uttar Pradesh</option>
+                <option value="Gujarat">Gujarat</option>
+                <option value="Kerala">Kerala</option>
+                <option value="Rajasthan">Rajasthan</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Bihar">Bihar</option>
+                <option value="Madhya Pradesh">Madhya Pradesh</option>
+                <option value="Odisha">Odisha</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                <option value="Assam">Assam</option>
+                <option value="Haryana">Haryana</option>
+                <option value="Goa">Goa</option>
+                <option value="Jharkhand">Jharkhand</option>
+                <option value="Chhattisgarh">Chhattisgarh</option>
+                <option value="Uttarakhand">Uttarakhand</option>
+                <option value="Himachal Pradesh">Himachal Pradesh</option>
+                <option value="Jammu & Kashmir">Jammu & Kashmir</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="fuel-city-select">Select District / City</label>
+              <select id="fuel-city-select" onchange="onCityChange()">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Quick Metro Cities -->
+          <div class="form-group">
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">Quick City Switch:</span>
+            <div class="preset-chips" style="margin-top: 4px;">
+              <button class="chip-btn active" id="chip-kolkata" onclick="selectQuickCity('West Bengal', 'Kolkata')">📍 Kolkata (₹113.50)</button>
+              <button class="chip-btn" id="chip-delhi" onclick="selectQuickCity('Delhi', 'New Delhi')">Delhi (₹94.72)</button>
+              <button class="chip-btn" id="chip-mumbai" onclick="selectQuickCity('Maharashtra', 'Mumbai')">Mumbai (₹111.21)</button>
+              <button class="chip-btn" id="chip-bengaluru" onclick="selectQuickCity('Karnataka', 'Bengaluru')">Bengaluru (₹111.68)</button>
+              <button class="chip-btn" id="chip-chennai" onclick="selectQuickCity('Tamil Nadu', 'Chennai')">Chennai (₹107.76)</button>
+              <button class="chip-btn" id="chip-hyderabad" onclick="selectQuickCity('Telangana', 'Hyderabad')">Hyderabad (₹116.15)</button>
+            </div>
+          </div>
+
+          <!-- Fuel Grade / Type Selection -->
+          <div class="form-group">
+            <label>Fuel Grade / Variant</label>
+            <div class="preset-chips">
+              <button class="chip-btn active" id="fuel-type-regular" onclick="setFuelGrade('regular')">Regular Petrol</button>
+              <button class="chip-btn" id="fuel-type-power" onclick="setFuelGrade('power')">Power / Speed (+₹4.50)</button>
+              <button class="chip-btn" id="fuel-type-xp95" onclick="setFuelGrade('xp95')">XP 95 Premium (+₹9.00)</button>
+              <button class="chip-btn" id="fuel-type-xp100" onclick="setFuelGrade('xp100')">XP 100 Octane</button>
+              <button class="chip-btn" id="fuel-type-cng" onclick="setFuelGrade('cng')">CNG (Bajaj Freedom)</button>
+            </div>
+          </div>
+
+          <!-- Fuel Price Input with Live Steppers -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px;">
+              <label for="trip-fuel-price" style="margin-bottom: 0;">Current Live Fuel Rate</label>
+              <span style="font-size: 11px; color: var(--success); font-weight: 700;" id="live-rate-tag">🟢 Kolkata Verified: ₹113.50 / L</span>
+            </div>
+            <div class="input-wrapper">
+              <span class="input-affix prefix">₹</span>
+              <input type="number" id="trip-fuel-price" value="113.50" min="50" max="250" step="0.01" class="has-prefix has-suffix" oninput="calcTrip()">
+              <span class="input-affix suffix" id="price-unit-suffix">/ Litre</span>
+            </div>
+
+            <!-- Price Micro-adjuster / Steppers -->
+            <div class="stepper-btn-group">
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Adjust Price:</span>
+              <button class="step-btn" onclick="adjustPrice(-1.00)">- ₹1.00</button>
+              <button class="step-btn" onclick="adjustPrice(-0.10)">- ₹0.10</button>
+              <button class="step-btn" onclick="adjustPrice(+0.10)">+ ₹0.10</button>
+              <button class="step-btn" onclick="adjustPrice(+1.00)">+ ₹1.00</button>
+              <button class="step-btn" onclick="resetToLivePrice()" style="margin-left: auto; color: var(--primary);">↺ Reset Rate</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Bike Maintenance & Riding Splits -->
+        <div class="card">
+          <div class="card-title">
+            <span>4. Bike Wear & Tear, Parking & Pillion Split</span>
+            <span class="badge">Indian Riding Factors</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="trip-tolls">Highway Tolls / FASTag</label>
+              <div class="input-wrapper">
+                <span class="input-affix prefix">₹</span>
+                <input type="number" id="trip-tolls" value="0.00" min="0" step="10" class="has-prefix" oninput="calcTrip()">
+              </div>
+              <span style="font-size: 10px; color: var(--text-muted);">Bikes are toll-free on most NH/SH in India</span>
+            </div>
+
+            <div class="form-group">
+              <label for="trip-parking">Bike Parking & Entry Fees</label>
+              <div class="input-wrapper">
+                <span class="input-affix prefix">₹</span>
+                <input type="number" id="trip-parking" value="30.00" min="0" step="10" class="has-prefix" oninput="calcTrip()">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="trip-maint">Chain Lube & Wear Rate</label>
+              <div class="input-wrapper">
+                <span class="input-affix prefix">₹</span>
+                <input type="number" id="trip-maint" value="0.25" min="0" step="0.05" class="has-prefix has-suffix" oninput="calcTrip()">
+                <span class="input-affix suffix">/ km</span>
+              </div>
+              <span style="font-size: 10px; color: var(--text-muted);">Chain lube, engine oil & tyre depreciation</span>
+            </div>
+
+            <div class="form-group">
+              <label for="trip-riders">Rider Split (Sharing Cost)</label>
+              <div class="input-wrapper">
+                <select id="trip-riders" onchange="calcTrip()">
+                  <option value="1" selected>Solo Rider (100% self)</option>
+                  <option value="2">With Pillion (50% split - 2 people)</option>
+                  <option value="3">Group Riding (3 riders split)</option>
+                  <option value="4">Group Riding (4 riders split)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Results -->
+      <div>
+        <!-- Tank Range Alert -->
+        <div id="tank-range-box" class="range-alert ok">
+          <span>⛽</span>
+          <span id="tank-range-msg">Full tank range: 468 km. No refuel stops required for this 360 km round trip.</span>
+        </div>
+
+        <!-- Results Hero -->
+        <div class="results-hero">
+          <span class="hero-badge">Total Estimated Bike Trip Cost</span>
+          <div class="hero-val" id="res-total-trip">₹0</div>
+          <div class="hero-sub" id="res-total-dist">360 km total (Round-trip)</div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Per Rider Cost</div>
+            <div class="metric-val" id="res-per-person">₹0</div>
+            <div class="metric-unit" id="res-rider-split-label">Solo Rider</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Petrol Required</div>
+            <div class="metric-val" id="res-fuel-needed">0.0</div>
+            <div class="metric-unit" id="res-fuel-unit-label">Litres</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Direct Fuel Bill</div>
+            <div class="metric-val" id="res-fuel-cost">₹0</div>
+            <div class="metric-unit" id="res-rate-quote">@ ₹113.50/L (Kolkata)</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Running Cost</div>
+            <div class="metric-val" id="res-cost-per-km">₹0.00</div>
+            <div class="metric-unit">per Kilometer</div>
+          </div>
+        </div>
+
+        <!-- Visual Cost Breakdown Donut -->
+        <div class="card">
+          <div class="card-title">Cost Breakdown</div>
+          <div class="chart-container">
+            <svg class="chart-svg" width="160" height="160" viewBox="0 0 42 42">
+              <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="var(--surface-alt)" stroke-width="6"></circle>
+              <!-- Segments -->
+              <circle id="donut-fuel" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#f97316" stroke-width="6" stroke-dasharray="80 20" stroke-dashoffset="0"></circle>
+              <circle id="donut-maint" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#8b5cf6" stroke-width="6" stroke-dasharray="15 85" stroke-dashoffset="0"></circle>
+              <circle id="donut-parking" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#0ea5e9" stroke-width="6" stroke-dasharray="5 95" stroke-dashoffset="0"></circle>
+              <circle id="donut-tolls" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#10b981" stroke-width="6" stroke-dasharray="0 100" stroke-dashoffset="0"></circle>
+            </svg>
+            <div class="chart-center-text">
+              <div class="chart-center-val" id="donut-center-cost">₹0</div>
+              <div class="chart-center-sub">Total</div>
+            </div>
+          </div>
+
+          <ul class="breakdown-list">
+            <li class="breakdown-item">
+              <div class="breakdown-label">
+                <span class="breakdown-dot" style="background: #f97316;"></span>
+                <span>Petrol Expense</span>
+              </div>
+              <div class="breakdown-val" id="bd-fuel">₹0.00</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">
+                <span class="breakdown-dot" style="background: #8b5cf6;"></span>
+                <span>Chain Lube & Wear</span>
+              </div>
+              <div class="breakdown-val" id="bd-maint">₹0.00</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">
+                <span class="breakdown-dot" style="background: #0ea5e9;"></span>
+                <span>Parking Fees</span>
+              </div>
+              <div class="breakdown-val" id="bd-parking">₹0.00</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">
+                <span class="breakdown-dot" style="background: #10b981;"></span>
+                <span>FASTag / Tolls</span>
+              </div>
+              <div class="breakdown-val" id="bd-tolls">₹0.00</div>
+            </li>
+          </ul>
+
+          <button class="action-btn btn-primary" onclick="copyTripSummary()">
+            <span>📋</span> Copy Trip Summary
+          </button>
+          <button class="action-btn btn-secondary" onclick="window.print()">
+            <span>🖨️</span> Print / Save PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Daily Bike Commute & Annual Fuel Budget -->
+  <div id="commute-tab" class="tab-pane">
+    <div class="calc-layout">
+      <!-- Left Inputs -->
+      <div>
+        <div class="card">
+          <div class="card-title">
+            <span>Daily Bike Commute Parameters</span>
+            <span class="badge orange">Office Routine</span>
+          </div>
+
+          <div class="form-group">
+            <label for="comm-dist">One-Way Office Distance</label>
+            <div class="input-wrapper">
+              <input type="number" id="comm-dist" value="18" min="1" step="1" class="has-suffix" oninput="calcCommute()">
+              <span class="input-affix suffix">km (one-way)</span>
+            </div>
+            <div class="preset-chips">
+              <button class="chip-btn" onclick="setCommDist(8)">8 km (Short)</button>
+              <button class="chip-btn" onclick="setCommDist(18)">18 km (Medium)</button>
+              <button class="chip-btn" onclick="setCommDist(30)">30 km (Long)</button>
+              <button class="chip-btn" onclick="setCommDist(45)">45 km (Intercity)</button>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="comm-days-week">Riding Days Per Week</label>
+              <select id="comm-days-week" onchange="calcCommute()">
+                <option value="1">1 day / week</option>
+                <option value="2">2 days / week</option>
+                <option value="3">3 days / week</option>
+                <option value="4">4 days / week</option>
+                <option value="5">5 days / week (Corporate standard)</option>
+                <option value="6" selected>6 days / week (Standard in India)</option>
+                <option value="7">7 days / week (Daily Delivery/Gig)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="comm-weeks-year">Working Weeks / Year</label>
+              <input type="number" id="comm-weeks-year" value="50" min="1" max="52" step="1" oninput="calcCommute()">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="comm-extra-dist">
+              Weekend & Leisure Riding <span class="label-hint">(per month)</span>
+            </label>
+            <div class="input-wrapper">
+              <input type="number" id="comm-extra-dist" value="200" min="0" step="25" class="has-suffix" oninput="calcCommute()">
+              <span class="input-affix suffix">km / month</span>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="comm-eff">Bike Fuel Mileage</label>
+              <div class="input-wrapper">
+                <input type="number" id="comm-eff" value="36.0" min="5" max="120" step="0.5" class="has-suffix" oninput="calcCommute()">
+                <span class="input-affix suffix">km/L</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="comm-fuel-price">Fuel Rate (Synced with Kolkata)</label>
+              <div class="input-wrapper">
+                <span class="input-affix prefix">₹</span>
+                <input type="number" id="comm-fuel-price" value="113.50" min="50" max="250" step="0.01" class="has-prefix has-suffix" oninput="calcCommute()">
+                <span class="input-affix suffix">/ L</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Results -->
+      <div>
+        <div class="results-hero">
+          <span class="hero-badge">Annual Bike Petrol Budget</span>
+          <div class="hero-val" id="res-comm-annual">₹0</div>
+          <div class="hero-sub" id="res-comm-annual-km">13,200 km total per year</div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Daily Commute Bill</div>
+            <div class="metric-val" id="res-comm-daily">₹0</div>
+            <div class="metric-unit">36 km round-trip</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Weekly Fuel Bill</div>
+            <div class="metric-val" id="res-comm-weekly">₹0</div>
+            <div class="metric-unit">6 days commuting</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Monthly Fuel Bill</div>
+            <div class="metric-val" id="res-comm-monthly">₹0</div>
+            <div class="metric-unit">Work + weekend riding</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Annual Petrol Volume</div>
+            <div class="metric-val" id="res-comm-litres">0</div>
+            <div class="metric-unit">Litres / year</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Bike vs Car Commute Savings</div>
+          <ul class="breakdown-list">
+            <li class="breakdown-item">
+              <div class="breakdown-label">Bike Running Cost per Day</div>
+              <div class="breakdown-val" style="color: var(--primary);" id="comm-cost-day">₹0.00</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">Savings vs Car Commute (~14 km/L)</div>
+              <div class="breakdown-val" style="color: var(--success);" id="comm-car-save">₹0 / year</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">Commute vs Personal Riding Ratio</div>
+              <div class="breakdown-val" id="comm-ratio">0% / 0%</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Compare Two Bikes -->
+  <div id="compare-tab" class="tab-pane">
+    <div class="calc-layout">
+      <!-- Left Inputs -->
+      <div>
+        <div class="card">
+          <div class="card-title">
+            <span>Shared Riding Conditions</span>
+            <span class="badge">Baseline</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="comp-annual-dist">Estimated Annual Distance</label>
+              <div class="input-wrapper">
+                <input type="number" id="comp-annual-dist" value="12000" min="500" step="500" class="has-suffix" oninput="calcCompare()">
+                <span class="input-affix suffix">km / year</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="comp-fuel-price">Fuel Price (Kolkata)</label>
+              <div class="input-wrapper">
+                <span class="input-affix prefix">₹</span>
+                <input type="number" id="comp-fuel-price" value="113.50" min="50" step="0.01" class="has-prefix has-suffix" oninput="calcCompare()">
+                <span class="input-affix suffix">/ L</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bike A vs Bike B -->
+        <div class="form-row">
+          <!-- Bike A -->
+          <div class="card">
+            <div class="card-title" style="color: #ef4444;">
+              <span>Motorcycle A</span>
+              <span class="badge" style="background: #fef2f2; color: #ef4444;">Bike 1</span>
+            </div>
+
+            <div class="form-group">
+              <label for="comp-name-a">Bike Name</label>
+              <input type="text" id="comp-name-a" value="Royal Enfield Classic 350" oninput="calcCompare()">
+            </div>
+
+            <div class="form-group">
+              <label for="comp-eff-a">Fuel Mileage</label>
+              <div class="input-wrapper">
+                <input type="number" id="comp-eff-a" value="36.0" min="5" max="120" step="0.5" class="has-suffix" oninput="calcCompare()">
+                <span class="input-affix suffix">km/L</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bike B -->
+          <div class="card">
+            <div class="card-title" style="color: var(--primary);">
+              <span>Motorcycle B</span>
+              <span class="badge" style="background: var(--primary-light); color: var(--primary);">Bike 2</span>
+            </div>
+
+            <div class="form-group">
+              <label for="comp-name-b">Bike Name</label>
+              <input type="text" id="comp-name-b" value="Hero Splendor Plus" oninput="calcCompare()">
+            </div>
+
+            <div class="form-group">
+              <label for="comp-eff-b">Fuel Mileage</label>
+              <div class="input-wrapper">
+                <input type="number" id="comp-eff-b" value="65.0" min="5" max="120" step="0.5" class="has-suffix" oninput="calcCompare()">
+                <span class="input-affix suffix">km/L</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Results -->
+      <div>
+        <div class="results-hero">
+          <span class="hero-badge">Annual Fuel Cost Difference</span>
+          <div class="hero-val" id="res-comp-savings">₹0</div>
+          <div class="hero-sub" id="res-comp-saving-sub">Annual savings with Bike B</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Side-by-Side Fuel Expense Comparison</div>
+
+          <!-- Comparison Bars -->
+          <div class="compare-bar-container">
+            <div class="compare-bar-label">
+              <span id="comp-lbl-a">Royal Enfield Classic 350</span>
+              <span id="comp-cost-a">₹0 / yr</span>
+            </div>
+            <div class="compare-progress-bg">
+              <div class="compare-progress-fill bar-a" id="bar-fill-a" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <div class="compare-bar-container">
+            <div class="compare-bar-label">
+              <span id="comp-lbl-b">Hero Splendor Plus</span>
+              <span id="comp-cost-b">₹0 / yr</span>
+            </div>
+            <div class="compare-progress-bg">
+              <div class="compare-progress-fill bar-b" id="bar-fill-b" style="width: 55%;"></div>
+            </div>
+          </div>
+
+          <ul class="breakdown-list" style="margin-top: 18px;">
+            <li class="breakdown-item">
+              <div class="breakdown-label">Monthly Fuel Savings</div>
+              <div class="breakdown-val" style="color: var(--primary);" id="comp-savings-month">₹0 / mo</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">3-Year Cumulative Savings</div>
+              <div class="breakdown-val" style="color: var(--primary);" id="comp-savings-3yr">₹0</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">5-Year Cumulative Savings</div>
+              <div class="breakdown-val" style="color: var(--primary); font-size: 15px;" id="comp-savings-5yr">₹0</div>
+            </li>
+            <li class="breakdown-item">
+              <div class="breakdown-label">Annual Petrol Saved</div>
+              <div class="breakdown-val" id="comp-vol-saved">0 Litres / yr</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: 60+ Bikes Mileage Directory -->
+  <div id="directory-tab" class="tab-pane">
+    <div class="card">
+      <div class="card-title">
+        <span>Indian Motorcycles Mileage & Fuel Economy Directory</span>
+        <span class="badge orange">60+ Models</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        Browse verified real-world fuel mileage (km/L) and running cost per 100 km at current Kolkata petrol price (₹113.50/L). Click any bike to immediately load it into the Trip Calculator.
+      </p>
+
+      <div class="directory-search">
+        <input type="text" id="dir-search-input" placeholder="Search by bike model (e.g. Pulsar, Splendor, Classic 350, MT-15)..." style="flex: 2; min-width: 200px;" oninput="filterDirectory()">
+        <select id="dir-segment-select" style="flex: 1; min-width: 150px;" onchange="filterDirectory()">
+          <option value="ALL">All Categories</option>
+          <option value="commuter">100cc - 125cc Commuters (55-75 km/L)</option>
+          <option value="street">150cc - 200cc Street & Sports (40-50 km/L)</option>
+          <option value="cruiser">250cc - 450cc Cruisers & Tourers (28-38 km/L)</option>
+          <option value="premium">650cc+ Multi-Cylinder (20-25 km/L)</option>
+        </select>
+      </div>
+
+      <div class="directory-grid" id="directory-cards-container">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast element -->
+<div id="toast" class="toast">
+  <span>✓</span>
+  <span id="toast-msg">Fuel price updated!</span>
+</div>
+
+<script src="data/bikes.js"></script>
+  <script src="data/fuelRates.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
